@@ -1,0 +1,468 @@
+            MVC
+ Register:
+        JSP
+<script type="text/javascript">
+function validate(){
+	var x=document.forms["myForm"]["name"].value;
+	var y=document.forms["myForm"]["pass"].value;
+	if(x==""){
+		alert("Name must be filled");
+		return false;
+	}
+
+}</script>
+</head>
+<body>
+<center>
+<form action="RegistrationController" method="post"name="myForm" onsubmit="return validate()">
+<h1>Registration</h1>
+<hr>
+<table>
+<tr><td>Login name</td><td><input type="text" name="name"></td></tr>
+<tr><td>Password</td><td><input type="password" name="pass"></td></tr>
+<tr><td>Age</td><td><input type="text" name="age"></td></tr>
+<tr><td>Address</td><td><textarea rows=4 cols=20 name="address"></textarea></td></tr>
+<tr><td>Email</td><td><input type="text" name="email"></td></tr>
+<tr><td></td><td><input type="submit" value="register"></td></tr>
+</table>
+</form>
+<% if(request.getAttribute("errorReason")!=null){
+	%>
+	<center>
+	<font color="red"><%= request.getAttribute("errorReason") %></font></center>
+	<%} %>
+
+////////////////////////////////////////////////////////////////
+      CONTROLLER
+	RegisterBean register=new RegisterBean();
+	try{
+		register.setLoginName(request.getParameter("name"));
+		register.setPassword(request.getParameter("pass"));
+		register.setAge(Integer.parseInt(request.getParameter("age")));
+		register.setAddress(request.getParameter("address"));
+		register.setEmail(request.getParameter("email"));
+	}catch(NumberFormatException e1){
+		RequestDispatcher rd=request.getRequestDispatcher("Register.jsp");
+		request.setAttribute("errorReason","Please enter valid details");
+		rd.forward(request, response);
+	}
+		ProfileManagementBO bo=new ProfileManagementBO();
+		try{
+		boolean res=bo.registerUser(register);
+		if(res){
+			RequestDispatcher rd=request.getRequestDispatcher("Home.jsp");
+			request.setAttribute("loginName", register.getLoginName());
+			rd.forward(request, response);
+		}else{
+			RequestDispatcher rd=request.getRequestDispatcher("Register.jsp");
+			request.setAttribute("errorReason", "Registration failed");
+			rd.forward(request, response);
+		}
+	}catch(CustomerBusinessExcetion|CustomerException e){
+		RequestDispatcher rd=request.getRequestDispatcher("Register.jsp");
+		request.setAttribute("errorReason", e.getMessage());
+		rd.forward(request, response);
+	}
+///////////////////////////////////////////////////////////////////////////////////////
+                       BO
+		if(regBean.getLoginName()==null || regBean.getPassword()==null || regBean.getAddress()==null||regBean.getEmail()==null){
+			throw new CustomerBusinessExcetion("Please enter valid details");
+			}
+		if(regBean.getAge()<18){
+			throw new CustomerBusinessExcetion("Invalid age");}
+			return new ProfileManagementDAO().registerUser(regBean);
+		
+//////////////////////////////////////////////////////////////////////////////////////////		
+
+              DAO
+boolean result=false;
+
+        try{
+			Class.forName("com.mysql.jdbc.Driver");
+           Connection con = DriverManager.getConnection("jdbc:mysql://localhost:3306/tempdb","root","dsrc");
+		 PreparedStatement ps=con.prepareStatement("insert into userdetails values(?,?,?,?,?)"); 
+            ps.setString(1,regBean.getLoginName());
+            ps.setString(2,regBean.getPassword());
+            ps.setInt(3,regBean.getAge());
+            ps.setString(4,regBean.getAddress());
+            ps.setString(5,regBean.getEmail());
+
+            int res=ps.executeUpdate();
+            if(res>0){
+            	result=true;
+            }
+
+        } catch (Exception e1) {
+			throw new CustomerException("Already Existing");
+   		}
+     
+		return result;
+		
+////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+Login:
+
+DAO:
+public boolean validateLogin(LoginBean logBean) throws CustomerException
+	{
+		boolean result=false;
+	
+    try{
+		Class.forName("com.mysql.jdbc.Driver");
+       Connection con = DriverManager.getConnection("jdbc:mysql://localhost:3306/tempdb","root","dsrc");
+	 PreparedStatement ps=con.prepareStatement("select * from userdetails where loginname=? and password=?"); 
+        ps.setString(1,logBean.getLoginName());
+        ps.setString(2,logBean.getPassword());
+        ResultSet rs=ps.executeQuery();
+        while(rs.next()){
+        
+        		result =true;
+        	
+        }
+    } catch (Exception e1) {
+		throw new CustomerException("Please Enter valid details");
+
+		}
+ 
+    return result;
+/////////////////////////////////////////////////////////////////////////////////////////////////////
+
+BO:
+if(logBean.getLoginName()==null || logBean.getPassword()==null ){
+			throw new CustomerBusinessExcetion("Please enter valid details");
+			}
+     
+		return new ProfileManagementDAO().validateLogin(logBean);
+//////////////////////////////////////////////////////////////////////////
+Controller:
+
+		HttpSession session=request.getSession();
+		LoginBean login=new LoginBean();
+		try{
+			login.setLoginName(request.getParameter("name"));
+			login.setPassword(request.getParameter("pass"));
+		
+		}catch(NumberFormatException e1){
+			RequestDispatcher rd=request.getRequestDispatcher("Login.jsp");
+			request.setAttribute("errorReason","Please enter valid details");
+			rd.forward(request, response);
+		}
+			ProfileManagementBO bo=new ProfileManagementBO();
+			try{
+			RegisterBean res=bo.validateLogin(login);
+			
+			
+			if(res.getAge()!=0){
+				RequestDispatcher rd=request.getRequestDispatcher("Home.jsp");
+				session.setAttribute("details", res);
+				session.setAttribute("name", res.getLoginName());
+				session.setAttribute("pass", res.getPassword());
+
+				rd.forward(request, response);
+			}else{
+				RequestDispatcher rd=request.getRequestDispatcher("Login.jsp");
+				request.setAttribute("errorReason", "Login failed");
+				rd.forward(request, response);
+			}
+		}catch(CustomerBusinessExcetion | CustomerException e){
+			RequestDispatcher rd=request.getRequestDispatcher("Login.jsp");
+			request.setAttribute("errorReason", e.getMessage());
+			rd.forward(request, response);
+		}
+/////////////////////////////////////////////////////////////////////
+jsp:
+<center>
+<h1>Login</h1>
+<form action="LoginController" method="post">
+
+<table>
+<tr><td>Login name</td><td><input type="text" name="name"></td></tr>
+<tr><td>Password</td><td><input type="password" name="pass"></td></tr>
+<tr><td></td><td><input type="submit" value="Login"></td></tr>
+</table>
+</form>
+
+</center>
+
+ <% if(request.getAttribute("errorReason")!=null){
+	%>
+	<center>
+	<font color="red"><%= request.getAttribute("errorReason") %></font></center>
+	<%} %>
+//////////////////////////////////////////////////////////////////////////////////////
+View
+jsp
+<center>
+<form action="ViewProfileController" >
+
+<h1>View Profile</h1>
+<%! RegisterBean regbean; %>
+<%
+	regbean=(RegisterBean)session.getAttribute("details");
+	
+%>
+
+Name:<%=regbean.getLoginName() %> <br>
+Password:<%=regbean.getPassword() %> <br>
+Age:<%=regbean.getAge() %><br>
+Address:<%=regbean.getAddress() %><br>
+Email:<%=regbean.getEmail() %><br>
+</form>
+
+<a href="EditProfile.jsp">Edit Profile</a> <br>
+<a href="ChangePassword.jsp">ChangePassword</a> <br>
+
+</center>
+//////////////////////////////////////////////////
+controller
+RegisterBean reg=new RegisterBean();
+		try{
+			reg.setLoginName(request.getParameter("name"));
+			reg.setPassword(request.getParameter("pass"));
+		
+		}catch(NumberFormatException e1){
+			RequestDispatcher rd=request.getRequestDispatcher("Login.jsp");
+			request.setAttribute("errorReason","Please enter valid details");
+			rd.forward(request, response);
+		}
+			ProfileManagementBO bo=new ProfileManagementBO();
+			RegisterBean res;
+			try {
+				res = bo.viewProfile(reg);
+				if(res.getLoginName()!=null){
+					RequestDispatcher rd=request.getRequestDispatcher("ViewProfile.jsp");
+					request.setAttribute("Details",res);
+					rd.forward(request, response);
+				}else{
+					RequestDispatcher rd=request.getRequestDispatcher("ViewProfile.jsp");
+					request.setAttribute("errorReason", "failed");
+					rd.forward(request, response);
+				}
+			} 
+			catch (SQLException | CustomerBusinessExcetion e) {
+				RequestDispatcher rd=request.getRequestDispatcher("ViewProfile.jsp");
+				request.setAttribute("errorReason", e.getMessage());
+				rd.forward(request, response);
+			}
+///////////////////////////////////////////////////////////////
+
+DAo
+		  RegisterBean rb=new RegisterBean();
+
+          try{
+				Class.forName("com.mysql.jdbc.Driver");
+		       Connection con = DriverManager.getConnection("jdbc:mysql://localhost:3306/tempdb","root","dsrc");
+			 PreparedStatement ps=con.prepareStatement("select * from userdetails where loginname=? and password=?"); 
+		        ps.setString(1,regBean.getLoginName());
+		        ps.setString(2,regBean.getPassword());
+
+		        ResultSet rs=ps.executeQuery();
+		        while(rs.next()){
+		              rb.setLoginName(rs.getString(1));	
+		              rb.setPassword(rs.getString(2));	
+		              rb.setAge(rs.getInt(3));	
+		              rb.setAddress(rs.getString(4));	
+		              rb.setEmail(rs.getString(5));	
+		           
+
+		        }
+		    } catch (ClassNotFoundException e1) {
+                    throw new CustomerBusinessExcetion(e1.getMessage());
+				}catch (SQLException e1) {
+					 throw new CustomerBusinessExcetion(e1.getMessage());
+				}
+		return rb;
+
+///////////////////////////////////////////////
+edit
+jsp
+<h1>Edit profile</h1>
+<%! RegisterBean regbean; %>
+<%
+	regbean=(RegisterBean)session.getAttribute("details");
+	
+%>
+<form action="EditController" method="post">
+<table>
+<tr><td>Login name</td><td><input type="text" name="name" value=<%=regbean.getLoginName() %>></td></tr>
+<tr><td>Password</td><td><input type="password" name="pass" value=<%=regbean.getPassword() %>></td></tr>
+<tr><td>Age</td><td><input type="text" name="age" value=<%=regbean.getAge() %>></td></tr>
+<tr><td>Address</td><td><input type="text" name="address" value=<%=regbean.getAddress() %>></td></tr>
+<tr><td>Email</td><td><input type="text" name="email" value=<%=regbean.getEmail() %>></td></tr>
+<tr><td></td><td><input type="submit" value="submit" ></td></tr>
+</table>
+</form>
+</center>
+
+<% if(request.getAttribute("errorReason")!=null){
+	%>
+	<center>
+	<font color="red"><%= request.getAttribute("errorReason") %></font></center>
+	<%} %>
+///////////////////////////////////////////////////////
+controller
+	 HttpSession session=request.getSession();
+		 RegisterBean login=new RegisterBean();
+         String name=session.getAttribute("name").toString();
+         String pass=session.getAttribute("pass").toString();
+
+       try{
+		    login.setLoginName(name);
+			login.setPassword(pass);
+		    login.setAge(Integer.parseInt(request.getParameter("age")));
+		    login.setAddress(request.getParameter("address"));
+		    login.setEmail(request.getParameter("email"));
+		}catch(NumberFormatException e1){
+			RequestDispatcher rd=request.getRequestDispatcher("EditProfile.jsp");
+			request.setAttribute("errorReason","Please enter valid details");
+			rd.forward(request, response);
+		}
+			ProfileManagementBO bo=new ProfileManagementBO();
+			try{
+			boolean res=bo.editUser(login);
+			
+			
+			if(res){
+				RequestDispatcher rd=request.getRequestDispatcher("EditProfile.jsp");
+				//session.setAttribute("details", res);
+                  request.setAttribute("errorReason", "success");
+				rd.forward(request, response);
+			}else{
+				RequestDispatcher rd=request.getRequestDispatcher("EditProfile.jsp");
+				request.setAttribute("errorReason", "failed");
+				rd.forward(request, response);
+			}
+		}catch(CustomerBusinessExcetion e){
+			RequestDispatcher rd=request.getRequestDispatcher("EditProfile.jsp");
+			request.setAttribute("errorReason", e.getMessage());
+			rd.forward(request, response);
+		}
+///////////////////////////////////////////////////////////////////////////////////////////////
+DAO
+boolean result=false;
+
+         try{
+				Class.forName("com.mysql.jdbc.Driver");
+		       Connection con = DriverManager.getConnection("jdbc:mysql://localhost:3306/tempdb","root","dsrc");
+			   PreparedStatement ps=con.prepareStatement("update userdetails set age=?,address=?,email=? where loginname=? and password=?"); 
+		        ps.setInt(1,regBean.getAge());
+		        ps.setString(2,regBean.getAddress());
+		        ps.setString(3,regBean.getEmail());
+		        ps.setString(4,regBean.getLoginName());
+		        ps.setString(5,regBean.getPassword());
+
+	            int res=ps.executeUpdate();
+	            if(res>0)
+	            {
+	            	result=true;
+	            }
+		    } catch (ClassNotFoundException e1) {
+                   throw new CustomerBusinessExcetion(e1.getMessage());
+				}
+         catch (SQLException e1) {
+			 throw new CustomerBusinessExcetion(e1.getMessage());
+		}
+		return result;
+///////////////////////////////////////////////////////////
+password
+jsp
+<script type="text/javascript">
+function validate(){
+	var x=document.forms["myForm"]["newpassword"].value;
+	var y=document.forms["myForm"]["confirmpassword"].value;
+	if(x.localeCompare(y)!=0){
+		alert("Please enter same password");
+		return false;
+	}
+
+}</script>
+</head>
+<body>
+<%! RegisterBean regbean; %>
+<%
+	regbean=(RegisterBean)session.getAttribute("details");
+	
+%>
+<center>
+<form action="ChangePasswordController" method="post" name="myForm" onsubmit="return validate()">
+<h1>Change Password</h1>
+<table>
+<tr><td>Login name</td><td><input type="text" name="name"value=<%=regbean.getLoginName() %>></td></tr>
+<tr><td>Old Password</td><td><input type="password" name="oldpassword"></td></tr>
+<tr><td>New Password</td><td><input type="password" name="newpassword"></td></tr>
+<tr><td>Confirm Password</td><td><input type="password" name="confirmpassword"></td></tr>
+
+<tr><td></td><td><input type="submit" value="submit"></td></tr>
+</table>
+</form>
+</center>
+<% if(request.getAttribute("errorReason")!=null){
+	%>
+	<center>
+	<font color="red"><%= request.getAttribute("errorReason") %></font></center>
+	<%} %>
+</body>
+///////////////////////////////////////////////////////////////
+controller
+HttpSession session=request.getSession();
+		ChangePasswordBean pass=new ChangePasswordBean();
+       String name=session.getAttribute("name").toString();
+		String oldpassword=request.getParameter("oldpassword");
+		String newpassword=request.getParameter("newpassword");
+		String confirmpassword=request.getParameter("confirmpassword");	
+	      try{
+		pass.setOldpassword(oldpassword);
+		pass.setNewpassword(newpassword);
+		pass.setConfirmpassword(confirmpassword);
+	      pass.setLoginName(name);
+			}catch(NumberFormatException e1){
+				RequestDispatcher rd=request.getRequestDispatcher("ChangePassword.jsp");
+				request.setAttribute("errorReason","Please enter valid details");
+				rd.forward(request, response);
+			}
+				ProfileManagementBO bo=new ProfileManagementBO();
+				try{
+				boolean res=bo.changePassword(pass);
+				
+				
+				if(res){
+					RequestDispatcher rd=request.getRequestDispatcher("ChangePassword.jsp");
+					//session.setAttribute("details", res);
+	                  request.setAttribute("errorReason", "success");
+					rd.forward(request, response);
+				}else{
+					RequestDispatcher rd=request.getRequestDispatcher("ChangePassword.jsp");
+					request.setAttribute("errorReason", "failed");
+					rd.forward(request, response);
+				}
+			}catch(CustomerBusinessExcetion e){
+				RequestDispatcher rd=request.getRequestDispatcher("ChangePassword.jsp");
+				request.setAttribute("errorReason", e.getMessage());
+				rd.forward(request, response);
+			}
+///////////////////////////////////////////////////////////////////////////
+DAO
+
+		boolean result=false;
+
+     try{
+			Class.forName("com.mysql.jdbc.Driver");
+	       Connection con = DriverManager.getConnection("jdbc:mysql://localhost:3306/tempdb","root","dsrc");
+		   PreparedStatement ps=con.prepareStatement("update userdetails set password=? where loginname=? and password=?"); 
+	        ps.setString(1,cBean.getNewpassword());
+	        ps.setString(2,cBean.getLoginName());
+	        ps.setString(3,cBean.getOldpassword());
+
+            int res=ps.executeUpdate();
+            if(res>0)
+            {
+            	result=true;
+            }
+	    } catch (ClassNotFoundException e1) {
+               throw new CustomerBusinessExcetion(e1.getMessage());
+			}
+     catch (SQLException e1) {
+		 throw new CustomerBusinessExcetion(e1.getMessage());
+	}
+	return result;
+//////////////////////////////////////////////////////////////////////////
